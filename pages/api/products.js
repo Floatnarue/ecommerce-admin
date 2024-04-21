@@ -1,25 +1,64 @@
 
+import { Product } from "@/models/Product";
 
-import product from "@/models/Product"
 import mongooseConnect from "@/lib/mongoose";
+import { isAdminRequest } from "./auth/[...nextauth]";
+
+
 export default async function handle(req, res) {
 
-    const { method } = req;
-    res.json(req.method)
-    try {
-        await mongooseConnect() ; 
 
+
+    const { method } = req;
+
+    try {
+        await mongooseConnect();
+        await isAdminRequest(req,res) ;
     } catch (error) {
         res.status(500).send(error);
+        return;
+    }
+
+    if (method == "GET") {
+        if (req.query?.id) {
+
+            res.json(await Product.findOne({ _id: req.query.id }));
+        } else {
+            res.json(await Product.find());
+        }
+
     }
 
 
+
     if (method === 'POST') {
-        const { title, description, price } = req.body;
-        const productDoc = await product.create({
-            title, description, price,
+        const { title, description, price ,images ,category , properties} = req.body;
+        const productDoc = await Product.create({
+            title, description, price,images,category,properties,
         });
         res.json(productDoc);
+    }
+
+    if (method === "PUT") {
+        const { title, description, price, images ,category , properties, _id} = req.body;
+        
+        
+        try {
+            
+            await Product.updateOne({_id}, { title, description, price , images ,category,properties});
+
+        } catch (error) {
+            res.status(500).send(error);
+
+        }
+
+    }
+
+    if(method === 'DELETE') {
+        if(req.query?.id) {
+            await Product.deleteOne({_id:req.query.id});
+            res.json(true);
+        }
     }
 }
 
